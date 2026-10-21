@@ -9,7 +9,7 @@ export const instant = false;
 
 export const metadata: Metadata = {
   title: `إدارة المنتجات والكتالوج | ${COMPANY.brandName.fullAr}`,
-  description: "لوحة إدارة وتعديل منتجات شركة الفاندي للصناعات البلاستيكية في PostgreSQL",
+  description: "لوحة إدارة وتعديل منتجات شركة الفاندي للصناعات البلاستيكية في MariaDB",
   robots: {
     index: false,
     follow: false,
@@ -68,7 +68,7 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
                 إدارة كتالوج المنتجات ({totalCount})
               </h1>
               <p className="text-xs sm:text-sm text-[#8E8E8E] mt-1">
-                تعديل وإضافة وتفعيل وإيقاف منتجات مصنع الفاندي المسجلة في PostgreSQL مع دعم الفيديو التوضيحي.
+                تعديل وإضافة وتفعيل وإيقاف منتجات مصنع الفاندي المسجلة في MariaDB مع دعم الفيديو التوضيحي.
               </p>
             </div>
           </div>

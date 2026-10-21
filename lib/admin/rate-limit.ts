@@ -47,7 +47,7 @@ export async function checkRateLimit(
     }>(
       `SELECT attempts, first_attempt_at, last_attempt_at, blocked_until
        FROM auth_rate_limits
-       WHERE key = $1;`,
+       WHERE \`key\` = $1;`,
       [key]
     );
 
@@ -124,42 +124,33 @@ export async function recordFailedAttempt(
   blockDurationMinutes: number = 15
 ): Promise<RateLimitStatus> {
   try {
-    const res = await query<{
-      attempts: number;
-      blocked_until: Date | null;
-    }>(
-      `INSERT INTO auth_rate_limits (key, attempts, first_attempt_at, last_attempt_at, blocked_until)
-       VALUES ($1, 1, NOW(), NOW(), NULL)
-       ON CONFLICT (key) DO UPDATE
-       SET 
+    // Keep this a single atomic upsert so parallel app workers cannot bypass the limit.
+    await query(
+      `INSERT INTO auth_rate_limits (
+         \`key\`, attempts, first_attempt_at, last_attempt_at, blocked_until
+       ) VALUES (?, 1, NOW(3), NOW(3), NULL)
+       ON DUPLICATE KEY UPDATE
          attempts = CASE
-           WHEN (auth_rate_limits.blocked_until IS NOT NULL AND auth_rate_limits.blocked_until <= NOW())
-                OR (auth_rate_limits.first_attempt_at <= NOW() - ($3 * INTERVAL '1 minute'))
-             THEN 1
-           ELSE auth_rate_limits.attempts + 1
+           WHEN (blocked_until IS NOT NULL AND blocked_until <= NOW(3))
+             OR first_attempt_at <= DATE_SUB(NOW(3), INTERVAL ? MINUTE)
+             THEN 1 ELSE attempts + 1
          END,
          first_attempt_at = CASE
-           WHEN (auth_rate_limits.blocked_until IS NOT NULL AND auth_rate_limits.blocked_until <= NOW())
-                OR (auth_rate_limits.first_attempt_at <= NOW() - ($3 * INTERVAL '1 minute'))
-             THEN NOW()
-           ELSE auth_rate_limits.first_attempt_at
+           WHEN (first_attempt_at <= DATE_SUB(NOW(3), INTERVAL ? MINUTE))
+             OR (blocked_until IS NOT NULL AND blocked_until <= NOW(3))
+             THEN NOW(3) ELSE first_attempt_at
          END,
-         last_attempt_at = NOW(),
-         blocked_until = CASE
-           -- If lockout expired or window expired, attempts was reset to 1. Only lock if maxAttempts is 1.
-           WHEN (auth_rate_limits.blocked_until IS NOT NULL AND auth_rate_limits.blocked_until <= NOW())
-                OR (auth_rate_limits.first_attempt_at <= NOW() - ($3 * INTERVAL '1 minute'))
-             THEN CASE WHEN 1 >= $2 THEN NOW() + ($3 * INTERVAL '1 minute') ELSE NULL END
-           -- Active window: check if incremented attempts reaches limit
-           WHEN (auth_rate_limits.attempts + 1) >= $2
-             THEN NOW() + ($3 * INTERVAL '1 minute')
-           ELSE NULL
-         END
-       RETURNING attempts, blocked_until;`,
-      [key, maxAttempts, blockDurationMinutes]
+         last_attempt_at = NOW(3),
+         blocked_until = IF(attempts >= ?, DATE_ADD(NOW(3), INTERVAL ? MINUTE), NULL);`,
+      [key, blockDurationMinutes, blockDurationMinutes, maxAttempts, blockDurationMinutes]
     );
 
+    const res = await query<{ attempts: number; blocked_until: Date | string | null }>(
+      "SELECT attempts, blocked_until FROM auth_rate_limits WHERE `key` = ?;",
+      [key]
+    );
     const row = res.rows[0];
+    if (!row) throw new Error("Rate limit row was not persisted.");
     const now = new Date();
     const isBlocked = row.blocked_until !== null && new Date(row.blocked_until) > now;
     const retryAfter = isBlocked
@@ -191,7 +182,7 @@ export async function recordFailedAttempt(
  */
 export async function resetRateLimit(key: string): Promise<void> {
   try {
-    await query(`DELETE FROM auth_rate_limits WHERE key = $1;`, [key]);
+    await query("DELETE FROM auth_rate_limits WHERE `key` = ?;", [key]);
   } catch (err) {
     console.warn(
       "[RATE LIMIT RESET WARNING] Could not clear auth_rate_limits key:",

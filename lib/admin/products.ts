@@ -8,7 +8,7 @@ import fs from "fs";
 import path from "path";
 import crypto from "crypto";
 import { query } from "@/lib/db";
-import { checkHasVideoColumn } from "@/lib/products";
+import { checkHasVideoColumn, parseFeatures } from "@/lib/products";
 import type { ProductItem, CategoryOption } from "@/types/products";
 
 export interface AdminProductFilterParams {
@@ -215,7 +215,7 @@ export async function validateProductInput(
     return { valid: false, error: "يجب اختيار تصنيف المنتج." };
   }
   const catCheck = await query<{ count: string }>(
-    `SELECT COUNT(*) AS count FROM categories WHERE key = $1;`,
+    `SELECT COUNT(*) AS count FROM categories WHERE \`key\` = $1;`,
     [cleanCategory]
   );
   if (Number(catCheck.rows[0]?.count ?? 0) === 0) {
@@ -309,7 +309,7 @@ export async function getAdminProducts(
   // Search filter (name, code, or short_desc)
   if (search.trim()) {
     conditions.push(
-      `(p.name ILIKE $${paramIndex} OR p.code ILIKE $${paramIndex} OR p.short_desc ILIKE $${paramIndex})`
+      `(p.name LIKE $${paramIndex} OR p.code LIKE $${paramIndex} OR p.short_desc LIKE $${paramIndex})`
     );
     queryParams.push(`%${search.trim()}%`);
     paramIndex++;
@@ -357,7 +357,7 @@ export async function getAdminProducts(
 
   // Video column check
   const hasVideo = await checkHasVideoColumn();
-  const videoSelect = hasVideo ? "p.video," : "NULL::varchar AS video,";
+  const videoSelect = hasVideo ? "p.video," : "CAST(NULL AS CHAR) AS video,";
 
   const dataParams = [...queryParams, safeLimit, offset];
   const limitParamIndex = paramIndex;
@@ -391,9 +391,9 @@ export async function getAdminProducts(
        p.tag,
        p.sort_order,
        p.is_active,
-       p.updated_at::text AS updated_at
+       p.updated_at AS updated_at
      FROM products p
-     JOIN categories c ON p.category_key = c.key
+     JOIN categories c ON p.category_key = c.\`key\`
      ${whereClause}
      ORDER BY ${orderCol} ${orderDirection}, p.id ASC
      LIMIT $${limitParamIndex} OFFSET $${offsetParamIndex};`,
@@ -409,10 +409,10 @@ export async function getAdminProducts(
     image: row.image,
     video: row.video ?? undefined,
     shortDesc: row.short_desc,
-    features: Array.isArray(row.features) ? row.features : [],
+    features: parseFeatures(row.features),
     tag: row.tag ?? undefined,
     sortOrder: row.sort_order ?? 0,
-    isActive: row.is_active ?? true,
+    isActive: Boolean(Number(row.is_active ?? 1)),
     updatedAt: row.updated_at || undefined,
   }));
 
@@ -432,7 +432,7 @@ export async function getAdminProducts(
  */
 export async function getAdminProductById(id: string): Promise<ProductItem | null> {
   const hasVideo = await checkHasVideoColumn();
-  const videoSelect = hasVideo ? "p.video," : "NULL::varchar AS video,";
+  const videoSelect = hasVideo ? "p.video," : "CAST(NULL AS CHAR) AS video,";
 
   const res = await query<{
     id: string;
@@ -462,9 +462,9 @@ export async function getAdminProductById(id: string): Promise<ProductItem | nul
        p.tag,
        p.sort_order,
        p.is_active,
-       p.updated_at::text AS updated_at
+       p.updated_at AS updated_at
      FROM products p
-     JOIN categories c ON p.category_key = c.key
+     JOIN categories c ON p.category_key = c.\`key\`
      WHERE p.id = $1;`,
     [id]
   );
@@ -483,10 +483,10 @@ export async function getAdminProductById(id: string): Promise<ProductItem | nul
     image: row.image,
     video: row.video ?? undefined,
     shortDesc: row.short_desc,
-    features: Array.isArray(row.features) ? row.features : [],
+    features: parseFeatures(row.features),
     tag: row.tag ?? undefined,
     sortOrder: row.sort_order ?? 0,
-    isActive: row.is_active ?? true,
+    isActive: Boolean(Number(row.is_active ?? 1)),
     updatedAt: row.updated_at || undefined,
   };
 }
@@ -501,13 +501,13 @@ export async function getAdminCategories(): Promise<CategoryOption[]> {
     product_count: string;
   }>(
     `SELECT 
-       c.key,
+       c.\`key\`,
        c.label,
        COUNT(p.id) AS product_count
      FROM categories c
-     LEFT JOIN products p ON c.key = p.category_key
-     GROUP BY c.key, c.label, c.sort_order
-     ORDER BY c.sort_order ASC, c.key ASC;`
+     LEFT JOIN products p ON c.\`key\` = p.category_key
+     GROUP BY c.\`key\`, c.label, c.sort_order
+     ORDER BY c.sort_order ASC, c.\`key\` ASC;`
   );
 
   return res.rows.map((row) => ({
@@ -518,7 +518,7 @@ export async function getAdminCategories(): Promise<CategoryOption[]> {
 }
 
 /**
- * Creates a new product in PostgreSQL.
+ * Creates a new product in MariaDB.
  */
 export async function createAdminProduct(data: ProductInputData): Promise<MutationResult> {
   const validation = await validateProductInput(data, false);
@@ -545,7 +545,7 @@ export async function createAdminProduct(data: ProductInputData): Promise<Mutati
           data.image.trim(),
           data.video ? data.video.trim() : null,
           data.shortDesc.trim(),
-          data.features.map((f) => f.trim()),
+          JSON.stringify(data.features.map((f) => f.trim())),
           data.tag && data.tag.trim() ? data.tag.trim() : null,
           data.sortOrder,
           data.isActive,
@@ -566,7 +566,7 @@ export async function createAdminProduct(data: ProductInputData): Promise<Mutati
           data.categoryKey.trim(),
           data.image.trim(),
           data.shortDesc.trim(),
-          data.features.map((f) => f.trim()),
+          JSON.stringify(data.features.map((f) => f.trim())),
           data.tag && data.tag.trim() ? data.tag.trim() : null,
           data.sortOrder,
           data.isActive,
@@ -578,7 +578,7 @@ export async function createAdminProduct(data: ProductInputData): Promise<Mutati
     return { success: true, productId: data.id.trim() };
   } catch (err: unknown) {
     const dbErr = err as { code?: string; message?: string };
-    if (dbErr.code === "23505") {
+    if (dbErr.code === "ER_DUP_ENTRY" || dbErr.code === "1062") {
       return {
         success: false,
         error: "رمز المنتج (الكود) أو المعرف مسجل مسبقاً. يجب أن تكون الأكواد والمعرفات فريدة.",
@@ -593,7 +593,7 @@ export async function createAdminProduct(data: ProductInputData): Promise<Mutati
 }
 
 /**
- * Updates an existing product in PostgreSQL.
+ * Updates an existing product in MariaDB.
  * Supports optimistic concurrency control via expectedUpdatedAt timestamp.
  */
 export async function updateAdminProduct(
@@ -609,7 +609,7 @@ export async function updateAdminProduct(
     return { success: false, error: validation.error };
   }
 
-  // Keep the timestamp as PostgreSQL text so sub-millisecond precision is preserved.
+  // MariaDB stores millisecond precision; the timestamp comparison remains in the UPDATE.
   // The comparison is part of the UPDATE itself to prevent a check-then-write race.
   if (expectedUpdatedAt && Number.isNaN(Date.parse(expectedUpdatedAt))) {
     return { success: false, error: "تعذر التحقق من نسخة المنتج. يرجى إعادة تحميل الصفحة." };
@@ -635,7 +635,7 @@ export async function updateAdminProduct(
              is_active = $11,
              source_hash = $12,
              updated_at = NOW()
-         WHERE id = $1${expectedUpdatedAtParam ? " AND updated_at = $13::timestamptz" : ""};`,
+         WHERE id = $1${expectedUpdatedAtParam ? " AND updated_at = STR_TO_DATE(REPLACE(REPLACE($13, 'T', ' '), 'Z', ''), '%Y-%m-%d %H:%i:%s.%f')" : ""};`,
         [
           cleanId,
           data.code.trim(),
@@ -644,7 +644,7 @@ export async function updateAdminProduct(
           data.image.trim(),
           data.video && data.video.trim() ? data.video.trim() : null,
           data.shortDesc.trim(),
-          data.features.map((f) => f.trim()),
+          JSON.stringify(data.features.map((f) => f.trim())),
           data.tag && data.tag.trim() ? data.tag.trim() : null,
           data.sortOrder,
           data.isActive,
@@ -675,7 +675,7 @@ export async function updateAdminProduct(
              is_active = $10,
              source_hash = $11,
              updated_at = NOW()
-         WHERE id = $1${expectedUpdatedAtParam ? " AND updated_at = $12::timestamptz" : ""};`,
+         WHERE id = $1${expectedUpdatedAtParam ? " AND updated_at = STR_TO_DATE(REPLACE(REPLACE($12, 'T', ' '), 'Z', ''), '%Y-%m-%d %H:%i:%s.%f')" : ""};`,
         [
           cleanId,
           data.code.trim(),
@@ -683,7 +683,7 @@ export async function updateAdminProduct(
           data.categoryKey.trim(),
           data.image.trim(),
           data.shortDesc.trim(),
-          data.features.map((f) => f.trim()),
+          JSON.stringify(data.features.map((f) => f.trim())),
           data.tag && data.tag.trim() ? data.tag.trim() : null,
           data.sortOrder,
           data.isActive,
@@ -705,7 +705,7 @@ export async function updateAdminProduct(
     return { success: true, productId: cleanId };
   } catch (err: unknown) {
     const dbErr = err as { code?: string; message?: string };
-    if (dbErr.code === "23505") {
+    if (dbErr.code === "ER_DUP_ENTRY" || dbErr.code === "1062") {
       return {
         success: false,
         error: "رمز المنتج (الكود) مسجل مسبقاً لمنتج آخر. يرجى اختيار رمز فريد.",

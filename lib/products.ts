@@ -20,7 +20,7 @@ interface ProductDbRow {
   image: string;
   video?: string | null;
   short_desc: string;
-  features: string[];
+  features: string[] | string;
   tag: string | null;
   sort_order: number;
   is_active: boolean;
@@ -43,14 +43,14 @@ export async function checkHasVideoColumn(): Promise<boolean> {
     return _hasVideoColumnCache;
   }
   try {
-    const res = await query<{ exists: boolean }>(
+    const res = await query<{ has_video: boolean }>(
       `SELECT EXISTS (
          SELECT 1 
          FROM information_schema.columns 
-         WHERE table_name = 'products' AND column_name = 'video'
-       ) AS exists;`
+         WHERE table_schema = DATABASE() AND table_name = 'products' AND column_name = 'video'
+       ) AS has_video;`
     );
-    _hasVideoColumnCache = res.rows[0]?.exists === true;
+    _hasVideoColumnCache = Boolean(Number(res.rows[0]?.has_video ?? 0));
     return _hasVideoColumnCache;
   } catch {
     return false;
@@ -58,7 +58,7 @@ export async function checkHasVideoColumn(): Promise<boolean> {
 }
 
 /**
- * Maps a PostgreSQL database row to the UI ProductItem model.
+ * Maps a MariaDB database row to the UI ProductItem model.
  */
 export function mapProductRow(row: ProductDbRow): ProductItem {
   return {
@@ -70,29 +70,40 @@ export function mapProductRow(row: ProductDbRow): ProductItem {
     image: row.image,
     video: row.video ?? undefined,
     shortDesc: row.short_desc,
-    features: Array.isArray(row.features) ? row.features : [],
+    features: parseFeatures(row.features),
     tag: row.tag ?? undefined,
     sortOrder: row.sort_order ?? 0,
-    isActive: row.is_active ?? true,
+    isActive: Boolean(Number(row.is_active ?? 1)),
     updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : undefined,
   };
 }
 
+export function parseFeatures(value: unknown): string[] {
+  if (Array.isArray(value)) return value.filter((item): item is string => typeof item === "string");
+  if (typeof value !== "string") return [];
+  try {
+    const parsed: unknown = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
 /**
- * Internal fetcher that queries PostgreSQL directly.
+ * Internal fetcher that queries MariaDB directly.
  * If the database query fails, this throws so that Next.js does NOT cache a failed result.
  */
 async function fetchProductsFromDb(): Promise<{ products: ProductItem[]; categories: CategoryOption[] }> {
   // 1. Fetch categories
   const categoriesRes = await query<CategoryDbRow>(
-    `SELECT key, label, sort_order
+    `SELECT \`key\`, label, sort_order
      FROM categories
-     ORDER BY sort_order ASC, key ASC;`
+     ORDER BY sort_order ASC, \`key\` ASC;`
   );
 
   // 2. Check for optional video column presence
   const hasVideo = await checkHasVideoColumn();
-  const videoSelect = hasVideo ? "p.video," : "NULL::varchar AS video,";
+  const videoSelect = hasVideo ? "p.video," : "CAST(NULL AS CHAR) AS video,";
 
   // 3. Fetch active products with joined category label, ordered by category and product sort order
   const productsRes = await query<ProductDbRow>(
@@ -111,7 +122,7 @@ async function fetchProductsFromDb(): Promise<{ products: ProductItem[]; categor
        p.is_active,
        p.updated_at
      FROM products p
-     JOIN categories c ON p.category_key = c.key
+     JOIN categories c ON p.category_key = c.\`key\`
      WHERE p.is_active = true
      ORDER BY c.sort_order ASC, p.sort_order ASC, p.id ASC;`
   );
@@ -163,8 +174,8 @@ async function getCachedCatalogData(): Promise<{ products: ProductItem[]; catego
  * Public Server-Side Data Access Function.
  *
  * Policy:
- * - Queries PostgreSQL via cached fetcher.
- * - If PostgreSQL is unavailable, captures the error and returns a clean error state without caching the failure.
+ * - Queries MariaDB via cached fetcher.
+ * - If MariaDB is unavailable, captures the error and returns a clean error state without caching the failure.
  * - Does NOT silently spoof or mask database unavailability with stale static data.
  */
 export async function getProducts(): Promise<CatalogDataResult> {
@@ -177,7 +188,11 @@ export async function getProducts(): Promise<CatalogDataResult> {
     };
   } catch (err: unknown) {
     const errorMessage = err instanceof Error ? err.message : String(err);
-    console.error("[DATABASE ERROR] Failed to fetch catalog data from PostgreSQL:", errorMessage);
+    // Missing local environment variables are a setup state, not an uncaught
+    // application failure. Keep them out of Next.js's development error overlay.
+    const isConfigurationError = errorMessage.includes("[DATABASE CONFIG ERROR]");
+    const log = isConfigurationError ? console.warn : console.error;
+    log("[DATABASE ERROR] Failed to fetch catalog data from MariaDB:", errorMessage);
 
     return {
       products: [],

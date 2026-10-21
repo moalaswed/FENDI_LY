@@ -102,7 +102,7 @@ export async function createAdminSession(
   const sessionId = "sess_" + crypto.randomBytes(32).toString("hex");
   const expiresAt = new Date(Date.now() + SESSION_DURATION_HOURS * 60 * 60 * 1000);
 
-  // 1. Insert session record into PostgreSQL
+  // 1. Insert session record into MariaDB
   await query(
     `INSERT INTO admin_sessions (id, user_id, expires_at, created_at, last_active_at, user_agent, ip_address)
      VALUES ($1, $2, $3, NOW(), NOW(), $4, $5);`,
@@ -152,7 +152,7 @@ export async function getVerifiedAdminSession(): Promise<{
     return null;
   }
 
-  // Verify that the session actually exists in PostgreSQL and is not expired
+  // Verify that the session actually exists in MariaDB and is not expired
   try {
     const res = await query<{
       id: string;
@@ -179,7 +179,7 @@ export async function getVerifiedAdminSession(): Promise<{
       sessionId: row.id,
       userId: row.user_id,
       role: row.role,
-      mustChangePassword: row.must_change_password,
+      mustChangePassword: Boolean(Number(row.must_change_password)),
     };
   } catch (err) {
     console.error("[AUTH SESSION VERIFY ERROR]", (err as Error).message);

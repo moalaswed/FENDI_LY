@@ -80,7 +80,7 @@ export default function ProductsPage() {
       <Header />
 
       <main className="flex-1">
-        {/* Full Interactive Product Catalog powered by PostgreSQL */}
+        {/* Full Interactive Product Catalog powered by MariaDB */}
         <Suspense fallback={<ProductCatalogFallback />}>
           <LiveProductCatalog />
         </Suspense>

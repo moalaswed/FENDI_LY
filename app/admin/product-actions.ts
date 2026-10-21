@@ -36,7 +36,7 @@ function revalidateCatalog(): void {
 /**
  * Server Action: Create New Product
  * Enforces super_admin authorization, handles safe media uploads or validated paths,
- * validates all fields on the server, and atomically writes to PostgreSQL.
+ * validates all fields on the server, and atomically writes to MariaDB.
  */
 export async function createProductAction(formData: FormData): Promise<ActionResponse> {
   // Authorization check inside Server Action

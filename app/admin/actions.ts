@@ -135,7 +135,7 @@ export async function loginAction(
     };
   }
 
-  // 2. Fetch user from PostgreSQL
+  // 2. Fetch user from MariaDB
   let userRow: {
     id: string;
     username: string;
@@ -162,18 +162,18 @@ export async function loginAction(
       userRow = res.rows[0];
     }
   } catch (err) {
-    const dbErr = err as { code?: string; message?: string };
-    if (dbErr.code === "42P01") {
+    const dbErr = err as { code?: string; errno?: number; message?: string };
+    if (dbErr.code === "ER_NO_SUCH_TABLE" || dbErr.errno === 1146) {
       console.error(
-        `[AUTH ERROR] Missing authentication table (PostgreSQL 42P01: ${dbErr.message}). The authentication schema has not been applied to the database. Run "scripts/auth-schema.sql" to initialize tables.`
+        `[AUTH ERROR] Missing authentication table: ${dbErr.message}. Apply "scripts/auth-schema.sql" to initialize tables.`
       );
     } else if (dbErr.code === "ECONNREFUSED" || dbErr.code === "ENOTFOUND") {
       console.error(
-        `[AUTH ERROR] Database connection refused or host unreachable (${dbErr.code}). Verify PostgreSQL service status and connection parameters.`
+        `[AUTH ERROR] Database connection refused or host unreachable (${dbErr.code}). Verify DB_HOST, DB_PORT, and the MariaDB service.`
       );
-    } else if (dbErr.code === "28P01" || dbErr.code === "28000") {
+    } else if (dbErr.code === "ER_ACCESS_DENIED_ERROR" || dbErr.errno === 1045) {
       console.error(
-        `[AUTH ERROR] Database authentication failed (${dbErr.code}). Verify PGUSER and PGPASSWORD.`
+        `[AUTH ERROR] Database authentication failed (${dbErr.code}). Verify DB_USER and DB_PASSWORD.`
       );
     } else {
       console.error(

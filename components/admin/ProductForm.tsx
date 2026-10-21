@@ -324,7 +324,7 @@ export default function ProductForm({
                   ))}
               </select>
               <span className="text-[10px] text-[#777777] mt-1 block">
-                ربط الصنف بالجدول المرجعي للأقسام في PostgreSQL
+                ربط الصنف بالجدول المرجعي للأقسام في MariaDB
               </span>
             </div>
 

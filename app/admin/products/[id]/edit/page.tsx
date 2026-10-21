@@ -75,7 +75,7 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
                 تعديل بيانات المنتج
               </h1>
               <p className="text-xs sm:text-sm text-[#8E8E8E] mt-1">
-                تحديث المواصفات، تعديل الصور، إدارة الفيديو التوضيحي، وحفظ التعديلات في PostgreSQL.
+                تحديث المواصفات، تعديل الصور، إدارة الفيديو التوضيحي، وحفظ التعديلات في MariaDB.
               </p>
             </div>
 

@@ -12,7 +12,7 @@ import { buildWhatsAppUrl } from "@/data/company";
  * with tailored marketing copy, category value propositions, and representative imagery.
  *
  * It is intentionally designed as an editorial high-level showcase that directs visitors
- * to the full, dynamic PostgreSQL-backed catalog at `/products`.
+ * to the full, dynamic MariaDB-backed catalog at `/products`.
  */
 
 interface CategoryHighlight {

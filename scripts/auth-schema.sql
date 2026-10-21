@@ -1,57 +1,38 @@
--- FENDI Plastic Industry - Admin Authentication & Authorization Schema
--- Idempotent schema definition for administrative users, sessions, and multi-process rate limits.
--- NOTE: Do NOT run this script automatically during build or app startup.
-
--- 1. Admin Users Table
+-- FENDI admin authentication schema for MariaDB / MySQL-compatible cPanel hosting.
 CREATE TABLE IF NOT EXISTS admin_users (
-    id VARCHAR(64) PRIMARY KEY,
-    username VARCHAR(100) NOT NULL UNIQUE,
-    password_hash VARCHAR(255) NOT NULL,
-    role VARCHAR(50) NOT NULL DEFAULT 'super_admin',
-    must_change_password BOOLEAN NOT NULL DEFAULT TRUE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    last_login_at TIMESTAMPTZ NULL
-);
+  id VARCHAR(64) NOT NULL,
+  username VARCHAR(100) NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  role VARCHAR(50) NOT NULL DEFAULT 'super_admin',
+  must_change_password TINYINT(1) NOT NULL DEFAULT 1,
+  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  last_login_at DATETIME(3) NULL,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_admin_users_username (username)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 2. Admin Sessions Table (Server-side Session Store)
 CREATE TABLE IF NOT EXISTS admin_sessions (
-    id VARCHAR(128) PRIMARY KEY,
-    user_id VARCHAR(64) NOT NULL REFERENCES admin_users(id) ON DELETE CASCADE,
-    expires_at TIMESTAMPTZ NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    last_active_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    user_agent TEXT NULL,
-    ip_address VARCHAR(45) NULL
-);
+  id VARCHAR(128) NOT NULL,
+  user_id VARCHAR(64) NOT NULL,
+  expires_at DATETIME(3) NOT NULL,
+  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  last_active_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  user_agent TEXT NULL,
+  ip_address VARCHAR(45) NULL,
+  PRIMARY KEY (id),
+  KEY idx_admin_sessions_user (user_id),
+  KEY idx_admin_sessions_expires (expires_at),
+  CONSTRAINT fk_admin_sessions_user FOREIGN KEY (user_id)
+    REFERENCES admin_users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 3. Multi-Process Login Rate Limiting Table
--- Compatible with multi-worker Phusion Passenger environments in cPanel
 CREATE TABLE IF NOT EXISTS auth_rate_limits (
-    key VARCHAR(255) PRIMARY KEY,
-    attempts INT NOT NULL DEFAULT 1,
-    first_attempt_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    last_attempt_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    blocked_until TIMESTAMPTZ NULL
-);
-
--- 4. Performance Indexes
-CREATE INDEX IF NOT EXISTS idx_admin_users_username ON admin_users(username);
-CREATE INDEX IF NOT EXISTS idx_admin_sessions_user ON admin_sessions(user_id);
-CREATE INDEX IF NOT EXISTS idx_admin_sessions_expires ON admin_sessions(expires_at);
-CREATE INDEX IF NOT EXISTS idx_auth_rate_limits_blocked ON auth_rate_limits(blocked_until);
-
--- 5. Trigger for updated_at Timestamp on admin_users
-CREATE OR REPLACE FUNCTION set_admin_updated_at_timestamp()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = NOW();
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-DROP TRIGGER IF EXISTS trigger_admin_users_updated_at ON admin_users;
-CREATE TRIGGER trigger_admin_users_updated_at
-BEFORE UPDATE ON admin_users
-FOR EACH ROW
-EXECUTE FUNCTION set_admin_updated_at_timestamp();
+  `key` VARCHAR(255) NOT NULL,
+  attempts INT NOT NULL DEFAULT 1,
+  first_attempt_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  last_attempt_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  blocked_until DATETIME(3) NULL,
+  PRIMARY KEY (`key`),
+  KEY idx_auth_rate_limits_blocked (blocked_until)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

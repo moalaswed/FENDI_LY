@@ -85,7 +85,7 @@ async function getDashboardData(): Promise<{
        ${videoExpr} AS has_video,
        p.updated_at
      FROM products p
-     JOIN categories c ON p.category_key = c.key
+     JOIN categories c ON p.category_key = c.\`key\`
      ORDER BY p.updated_at DESC
      LIMIT 5;`
   );
@@ -303,7 +303,7 @@ export default async function AdminDashboardPage() {
               <div className="space-y-2">
                 <div className="flex justify-between py-1 border-b border-[#242424]">
                   <span>قاعدة البيانات:</span>
-                  <span className="text-emerald-400 font-mono">PostgreSQL (متصل)</span>
+                  <span className="text-emerald-400 font-mono">MariaDB (متصل)</span>
                 </div>
                 <div className="flex justify-between py-1 border-b border-[#242424]">
                   <span>التحقق من الصلاحيات:</span>

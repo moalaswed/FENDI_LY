@@ -53,7 +53,7 @@ export const getCurrentAdmin = cache(async (): Promise<AdminUserDto | null> => {
       id: row.id,
       username: row.username,
       role: row.role,
-      mustChangePassword: row.must_change_password,
+      mustChangePassword: Boolean(Number(row.must_change_password)),
       createdAt: new Date(row.created_at).toISOString(),
       lastLoginAt: row.last_login_at ? new Date(row.last_login_at).toISOString() : null,
     };
