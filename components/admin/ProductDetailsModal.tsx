@@ -104,7 +104,6 @@ export default function ProductDetailsModal({
                 )}
               </div>
 
->
             </div>
 
             <div className="pt-4 border-t border-[#252525] mt-4">
