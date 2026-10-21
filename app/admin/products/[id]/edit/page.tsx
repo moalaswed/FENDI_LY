@@ -13,24 +13,17 @@ import { COMPANY } from "@/data/company";
 
 export const instant = false;
 
+export const metadata: Metadata = {
+  title: `تعديل المنتج | ${COMPANY.brandName.fullAr}`,
+  description: "تعديل مواصفات المنتج وبياناته وصورته والفيديو التوضيحي",
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
+
 interface EditProductPageProps {
   params: Promise<{ id: string }>;
-}
-
-export async function generateMetadata({ params }: EditProductPageProps): Promise<Metadata> {
-  const { id } = await params;
-  const product = await getAdminProductById(id);
-
-  return {
-    title: product
-      ? `تعديل المنتج: ${product.name} | ${COMPANY.brandName.fullAr}`
-      : `تعديل المنتج | ${COMPANY.brandName.fullAr}`,
-    description: "تعديل مواصفات المنتج وبياناته وصورته والفيديو التوضيحي",
-    robots: {
-      index: false,
-      follow: false,
-    },
-  };
 }
 
 export default async function EditProductPage({ params }: EditProductPageProps) {
