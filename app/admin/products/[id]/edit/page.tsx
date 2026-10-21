@@ -15,7 +15,7 @@ export const instant = false;
 
 export const metadata: Metadata = {
   title: `تعديل المنتج | ${COMPANY.brandName.fullAr}`,
-  description: "تعديل مواصفات المنتج وبياناته وصورته والفيديو التوضيحي",
+  description: "تعديل مواصفات المنتج وبياناته وصورته",
   robots: {
     index: false,
     follow: false,
@@ -68,7 +68,7 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
                 تعديل بيانات المنتج
               </h1>
               <p className="text-xs sm:text-sm text-[#8E8E8E] mt-1">
-                تحديث المواصفات، تعديل الصور، إدارة الفيديو التوضيحي، وحفظ التعديلات في MariaDB.
+                تحديث المواصفات وتعديل الصور وحفظ التعديلات في MariaDB.
               </p>
             </div>
 

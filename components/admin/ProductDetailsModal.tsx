@@ -1,6 +1,5 @@
 "use client";
 
-import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import type { ProductItem } from "@/types/products";
@@ -15,12 +14,10 @@ export default function ProductDetailsModal({
   product,
   onClose,
 }: ProductDetailsModalProps) {
-  const [isPlayingVideo, setIsPlayingVideo] = useState(false);
 
   if (!product) return null;
 
   const whatsappUrl = buildWhatsAppUrl(product.name, product.code);
-  const hasVideo = Boolean(product.video && product.video.trim().length > 0);
 
   return (
     <div
@@ -57,53 +54,19 @@ export default function ProductDetailsModal({
 
         {/* Product Media & Core Info Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
-          {/* Media Box */}
+          {/* Product Image */}
           <div className="relative aspect-square rounded-xl overflow-hidden bg-black border border-[#2E2E2E]">
-            {hasVideo && isPlayingVideo ? (
-              <div className="relative w-full h-full bg-black">
-                <video
-                  src={product.video || undefined}
-                  poster={product.image}
-                  controls
-                  autoPlay
-                  playsInline
-                  className="w-full h-full object-contain"
-                />
-                <button
-                  type="button"
-                  onClick={() => setIsPlayingVideo(false)}
-                  className="absolute top-2 left-2 z-10 px-2 py-1 rounded bg-black/80 hover:bg-[#A50000] text-white text-[10px] font-bold"
-                >
-                  ✕ إغلاق
-                </button>
-              </div>
-            ) : (
-              <>
-                <Image
-                  src={product.image}
-                  alt={product.name}
-                  fill
-                  sizes="300px"
-                  className="object-cover"
-                />
-                {hasVideo && (
-                  <button
-                    type="button"
-                    onClick={() => setIsPlayingVideo(true)}
-                    className="absolute inset-0 m-auto w-12 h-12 rounded-full bg-black/75 hover:bg-[#A50000] text-white flex items-center justify-center backdrop-blur-md border border-white/20 transition-all duration-200 hover:scale-110 shadow-xl cursor-pointer"
-                    title="تشغيل الفيديو"
-                  >
-                    <svg className="w-5 h-5 fill-current translate-x-[-1px]" viewBox="0 0 24 24">
-                      <path d="M8 5v14l11-7z" />
-                    </svg>
-                  </button>
-                )}
-                {product.tag && (
-                  <span className="absolute top-2.5 right-2.5 px-2.5 py-1 rounded-md text-[10px] font-bold bg-[#A50000] text-white shadow">
-                    {product.tag}
-                  </span>
-                )}
-              </>
+            <Image
+              src={product.image}
+              alt={product.name}
+              fill
+              sizes="300px"
+              className="object-cover"
+            />
+            {product.tag && (
+              <span className="absolute top-2.5 right-2.5 px-2.5 py-1 rounded-md text-[10px] font-bold bg-[#A50000] text-white shadow">
+                {product.tag}
+              </span>
             )}
           </div>
 
@@ -141,16 +104,7 @@ export default function ProductDetailsModal({
                 )}
               </div>
 
-              <div>
-                <span className="text-[#8E8E8E] text-xs block mb-1">دعم الفيديو:</span>
-                {hasVideo ? (
-                  <span className="text-xs text-emerald-400 font-medium break-all">
-                    مدعوم ({product.video})
-                  </span>
-                ) : (
-                  <span className="text-xs text-[#777777]">غير متاح (صورة فقط)</span>
-                )}
-              </div>
+>
             </div>
 
             <div className="pt-4 border-t border-[#252525] mt-4">

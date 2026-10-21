@@ -68,7 +68,7 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
                 إدارة كتالوج المنتجات ({totalCount})
               </h1>
               <p className="text-xs sm:text-sm text-[#8E8E8E] mt-1">
-                تعديل وإضافة وتفعيل وإيقاف منتجات مصنع الفاندي المسجلة في MariaDB مع دعم الفيديو التوضيحي.
+                تعديل وإضافة وتفعيل وإيقاف منتجات مصنع الفاندي المسجلة في MariaDB.
               </p>
             </div>
           </div>

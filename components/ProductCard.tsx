@@ -1,6 +1,5 @@
 "use client";
 
-import React, { useState } from "react";
 import Image from "next/image";
 import type { ProductItem } from "@/types/products";
 import { buildWhatsAppUrl } from "@/data/company";
@@ -9,138 +8,32 @@ interface ProductCardProps {
   product: ProductItem;
 }
 
-/**
- * Parses known video host platforms (YouTube, Vimeo) into privacy-enhanced embed URLs.
- * Returns null for direct media files (MP4, WebM, etc.).
- */
-function getEmbedUrl(url: string): string | null {
-  try {
-    const trimmed = url.trim();
-    // YouTube
-    const ytMatch = trimmed.match(
-      /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/
-    );
-    if (ytMatch) {
-      return `https://www.youtube-nocookie.com/embed/${ytMatch[1]}?autoplay=1&rel=0&modestbranding=1`;
-    }
-    // Vimeo
-    const vimeoMatch = trimmed.match(/vimeo\.com\/(?:video\/)?([0-9]+)/);
-    if (vimeoMatch) {
-      return `https://player.vimeo.com/video/${vimeoMatch[1]}?autoplay=1`;
-    }
-    return null;
-  } catch {
-    return null;
-  }
-}
-
 export default function ProductCard({ product }: ProductCardProps) {
-  const [isPlayingVideo, setIsPlayingVideo] = useState(false);
   const whatsappUrl = buildWhatsAppUrl(product.name, product.code);
-  const hasVideo = Boolean(product.video && product.video.trim().length > 0);
-  const embedUrl = hasVideo ? getEmbedUrl(product.video!) : null;
 
   return (
     <div className="flex flex-col rounded-2xl bg-[#202020] border border-[#2E2E2E] hover:border-[#520000] overflow-hidden card-hover-effect group h-full">
-      {/* Media Container with Consistent Aspect Ratio */}
+      {/* Product Image */}
       <div className="relative aspect-square w-full bg-[#181818] overflow-hidden">
-        {hasVideo && isPlayingVideo ? (
-          <div className="relative w-full h-full bg-black">
-            {embedUrl ? (
-              <iframe
-                src={embedUrl}
-                title={`فيديو توضيحي لمنتج ${product.name}`}
-                className="w-full h-full border-0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              />
-            ) : (
-              <video
-                src={product.video!}
-                poster={product.image}
-                controls
-                autoPlay
-                playsInline
-                className="w-full h-full object-contain bg-black"
-                aria-label={`فيديو توضيحي لمنتج ${product.name}`}
-              >
-                <source src={product.video!} type="video/mp4" />
-                <source src={product.video!} type="video/webm" />
-                متصفحك لا يدعم تشغيل هذا الفيديو.
-              </video>
-            )}
-
-            {/* Close Video & Return to Image View Button */}
-            <button
-              type="button"
-              onClick={() => setIsPlayingVideo(false)}
-              className="absolute top-3 left-3 z-20 px-2.5 py-1 rounded-md bg-black/80 hover:bg-[#A50000] text-white text-[11px] font-bold border border-white/20 transition-colors flex items-center gap-1 cursor-pointer shadow-lg"
-              aria-label="إغلاق الفيديو والعودة لصورة المنتج"
-            >
-              <span>✕</span>
-              <span>إغلاق الفيديو</span>
-            </button>
-          </div>
-        ) : (
-          <>
-            <Image
-              src={product.image}
-              alt={product.name}
-              fill
-              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-              className="object-cover transition-transform duration-500 group-hover:scale-105"
-            />
-
-            {/* Video Play Trigger Button (only when product has a video) */}
-            {hasVideo && (
-              <button
-                type="button"
-                onClick={() => setIsPlayingVideo(true)}
-                className="absolute inset-0 m-auto w-14 h-14 rounded-full bg-black/80 hover:bg-[#A50000] text-white flex items-center justify-center backdrop-blur-md border border-white/30 transition-all duration-300 hover:scale-110 shadow-2xl cursor-pointer group/play z-10"
-                aria-label={`تشغيل فيديو توضيحي لمنتج ${product.name}`}
-                title="اضغط لمشاهدة فيديو توضيحي"
-              >
-                <svg
-                  className="w-6 h-6 fill-current translate-x-[-1px] group-hover/play:scale-110 transition-transform"
-                  viewBox="0 0 24 24"
-                >
-                  <path d="M8 5v14l11-7z" />
-                </svg>
-              </button>
-            )}
-
-            {/* Top Badges */}
-            <div className="absolute top-3 right-3 left-3 flex items-center justify-between gap-2 pointer-events-none z-10">
-              <div className="flex items-center gap-1.5">
-                {product.code ? (
-                  <span
-                    className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-[#111111]/90 backdrop-blur-md text-white border border-white/10"
-                    dir="ltr"
-                  >
-                    {product.code}
-                  </span>
-                ) : (
-                  <span />
-                )}
-
-                {hasVideo && (
-                  <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-[#A50000] text-white flex items-center gap-1 shadow-md">
-                    <svg className="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24">
-                      <path d="M8 5v14l11-7z" />
-                    </svg>
-                    <span>فيديو</span>
-                  </span>
-                )}
-              </div>
-
-              {product.tag && (
-                <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-[#A50000] text-white shadow-md">
-                  {product.tag}
-                </span>
-              )}
-            </div>
-          </>
-        )}
+        <Image
+          src={product.image}
+          alt={product.name}
+          fill
+          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+          className="object-cover transition-transform duration-500 group-hover:scale-105"
+        />
+        <div className="absolute top-3 right-3 left-3 flex items-center justify-between gap-2 pointer-events-none z-10">
+          {product.code && (
+            <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-[#111111]/90 backdrop-blur-md text-white border border-white/10" dir="ltr">
+              {product.code}
+            </span>
+          )}
+          {product.tag && (
+            <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-[#A50000] text-white shadow-md">
+              {product.tag}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Content Area */}

@@ -238,13 +238,12 @@ export default function ProductManagementTable({
           <tbody className="divide-y divide-[#222222] text-xs">
             {products.length > 0 ? (
               products.map((product) => {
-                const hasVideo = Boolean(product.video && product.video.trim().length > 0);
                 return (
                   <tr
                     key={product.id}
                     className="hover:bg-[#1E1E1E] transition-colors group"
                   >
-                    {/* Thumbnail & Video Badge */}
+                    {/* Product Thumbnail */}
                     <td className="py-3 px-4">
                       <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-black border border-[#2E2E2E]">
                         <Image
@@ -254,17 +253,6 @@ export default function ProductManagementTable({
                           sizes="48px"
                           className="object-cover"
                         />
-                        {hasVideo && (
-                          <div
-                            className="absolute bottom-0 inset-x-0 bg-[#A50000] text-white text-[8px] font-bold py-0.5 text-center flex items-center justify-center gap-0.5"
-                            title="يحتوي على فيديو توضيحي"
-                          >
-                            <svg className="w-2 h-2 fill-current" viewBox="0 0 24 24">
-                              <path d="M8 5v14l11-7z" />
-                            </svg>
-                            <span>فيديو</span>
-                          </div>
-                        )}
                       </div>
                     </td>
 
@@ -373,7 +361,6 @@ export default function ProductManagementTable({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:hidden">
         {products.length > 0 ? (
           products.map((product) => {
-            const hasVideo = Boolean(product.video && product.video.trim().length > 0);
             return (
               <div
                 key={product.id}
@@ -389,11 +376,6 @@ export default function ProductManagementTable({
                         sizes="64px"
                         className="object-cover"
                       />
-                      {hasVideo && (
-                        <div className="absolute bottom-0 inset-x-0 bg-[#A50000] text-white text-[8px] font-bold py-0.5 text-center">
-                          فيديو
-                        </div>
-                      )}
                     </div>
 
                     <div className="flex-1 min-w-0">

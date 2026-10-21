@@ -80,27 +80,13 @@ export async function createProductAction(formData: FormData): Promise<ActionRes
       return { success: false, error: "صورة المنتج مطلوبة. يرجى رفع صورة أو اختيارها من المعرض." };
     }
 
-    // 2. Video handling (optional: uploaded file takes precedence, else validated URL/path)
-    let videoPath: string | null = (formData.get("videoUrl") as string)?.trim() || null;
-    const videoFile = formData.get("videoFile") as File | null;
-
-    if (videoFile && videoFile.size > 0 && videoFile.name) {
-      const uploadResult = await handleSafeMediaUpload(videoFile, "video");
-      if (!uploadResult.success) {
-        uploadedMedia.forEach(removeUploadedMedia);
-        return { success: false, error: uploadResult.error };
-      }
-      videoPath = uploadResult.url!;
-      uploadedMedia.push(videoPath);
-    }
-
     const inputData: ProductInputData = {
       id,
       code,
       name,
       categoryKey,
       image: imagePath,
-      video: videoPath,
+      video: null,
       shortDesc,
       features,
       tag,
@@ -177,32 +163,13 @@ export async function updateProductAction(formData: FormData): Promise<ActionRes
       return { success: false, error: "صورة المنتج مطلوبة." };
     }
 
-    // 2. Video handling
-    const removeVideo = formData.get("removeVideo") === "true";
-    let videoPath: string | null = null;
-
-    if (!removeVideo) {
-      videoPath = (formData.get("videoUrl") as string)?.trim() || null;
-      const videoFile = formData.get("videoFile") as File | null;
-
-      if (videoFile && videoFile.size > 0 && videoFile.name) {
-        const uploadResult = await handleSafeMediaUpload(videoFile, "video");
-        if (!uploadResult.success) {
-          uploadedMedia.forEach(removeUploadedMedia);
-          return { success: false, error: uploadResult.error };
-        }
-        videoPath = uploadResult.url!;
-        uploadedMedia.push(videoPath);
-      }
-    }
-
     const inputData: ProductInputData = {
       id,
       code,
       name,
       categoryKey,
       image: imagePath,
-      video: videoPath,
+      video: null,
       shortDesc,
       features,
       tag,

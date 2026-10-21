@@ -47,12 +47,6 @@ export default function ProductForm({
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(initialProduct?.image || null);
   const [showGalleryModal, setShowGalleryModal] = useState(false);
 
-  // Video State
-  const [videoUrl, setVideoUrl] = useState(initialProduct?.video || "");
-  const [videoFile, setVideoFile] = useState<File | null>(null);
-  const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(initialProduct?.video || null);
-  const [removeVideo, setRemoveVideo] = useState(false);
-
   // UI state
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -94,39 +88,6 @@ export default function ProductForm({
     setImageFile(null);
     setImagePreviewUrl(src);
     setShowGalleryModal(false);
-  };
-
-  // Video File selection
-  const handleVideoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 25 * 1024 * 1024) {
-        setErrorMessage("حجم ملف الفيديو كبير جداً (الحد الأقصى 25 ميجابايت).");
-        return;
-      }
-      setVideoFile(file);
-      setRemoveVideo(false);
-      const url = URL.createObjectURL(file);
-      setVideoPreviewUrl(url);
-      setErrorMessage(null);
-    }
-  };
-
-  // Video URL change
-  const handleVideoUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    setVideoUrl(val);
-    setVideoFile(null);
-    setRemoveVideo(false);
-    setVideoPreviewUrl(val.trim() || null);
-  };
-
-  // Clear Video
-  const handleClearVideo = () => {
-    setVideoUrl("");
-    setVideoFile(null);
-    setVideoPreviewUrl(null);
-    setRemoveVideo(true);
   };
 
   // Features helpers
@@ -180,18 +141,6 @@ export default function ProductForm({
       formData.append("imageFile", imageFile);
     }
     formData.append("imagePath", imagePath.trim());
-
-    // Video
-    if (removeVideo) {
-      formData.append("removeVideo", "true");
-    } else {
-      if (videoFile) {
-        formData.append("videoFile", videoFile);
-      }
-      if (videoUrl.trim()) {
-        formData.append("videoUrl", videoUrl.trim());
-      }
-    }
 
     if (isEdit && initialProduct?.updatedAt) {
       formData.append("expectedUpdatedAt", initialProduct.updatedAt);
@@ -345,17 +294,17 @@ export default function ProductForm({
           </div>
         </div>
 
-        {/* Section 2: Media Assets (Image & Video) */}
+        {/* Section 2: Product Image */}
         <div className="bg-[#181818] border border-[#2A2A2A] rounded-2xl p-6 sm:p-8">
           <h3 className="text-base font-bold text-white mb-1 flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-[#A50000]" />
-            <span>وسائط العرض (الصورة والفيديو التوضيحي)</span>
+            <span>صورة المنتج</span>
           </h3>
           <p className="text-xs text-[#8E8E8E] mb-6">
-            الصورة إلزامية كغلاف، والفيديو اختياري يُعرض بضغطة زر دون تشغيل تلقائي مزعج
+            اختر صورة المنتج التي ستظهر في الكتالوج.
           </p>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 gap-8">
             {/* Image Management */}
             <div className="space-y-4">
               <label className="block text-xs font-bold text-white">
@@ -426,75 +375,6 @@ export default function ProductForm({
               </div>
             </div>
 
-            {/* Video Management (Optional) */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <label className="block text-xs font-bold text-white">
-                  فيديو توضيحي للمنتج <span className="text-[#8E8E8E] font-normal">(اختياري)</span>
-                </label>
-                {(videoUrl || videoFile || videoPreviewUrl) && (
-                  <button
-                    type="button"
-                    onClick={handleClearVideo}
-                    className="text-xs text-red-400 hover:text-red-300 transition-colors cursor-pointer"
-                  >
-                    حذف الفيديو
-                  </button>
-                )}
-              </div>
-
-              {/* Preview */}
-              <div className="relative aspect-[4/3] rounded-xl overflow-hidden bg-black border border-[#2E2E2E] flex items-center justify-center">
-                {videoPreviewUrl && !removeVideo ? (
-                  <video
-                    src={videoPreviewUrl}
-                    controls
-                    playsInline
-                    className="w-full h-full object-contain"
-                  />
-                ) : (
-                  <div className="text-center p-4">
-                    <svg className="w-10 h-10 text-[#444444] mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                    </svg>
-                    <span className="text-xs text-[#666666] block">لا يوجد فيديو توضيحي مرفق</span>
-                    <span className="text-[10px] text-[#555555] block mt-0.5">سيظهر المنتج بصورته الثابتة فقط</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex flex-wrap items-center gap-2">
-                {/* Upload Local Video */}
-                <label className="px-4 py-2 rounded-xl bg-[#222222] hover:bg-[#2A2A2A] text-white text-xs font-semibold border border-[#333333] transition-colors cursor-pointer flex items-center gap-1.5">
-                  <svg className="w-4 h-4 text-[#A50000]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                  </svg>
-                  <span>رفع فيديو MP4 / WebM (حتى 25MB)</span>
-                  <input
-                    type="file"
-                    accept="video/mp4,video/webm,video/ogg"
-                    className="hidden"
-                    onChange={handleVideoFileChange}
-                  />
-                </label>
-              </div>
-
-              {/* Video URL Input */}
-              <div>
-                <span className="text-[11px] text-[#777777] block mb-1">
-                  أو أدخل رابط فيديو خارجي (YouTube أو Vimeo أو MP4):
-                </span>
-                <input
-                  type="url"
-                  value={videoUrl}
-                  onChange={handleVideoUrlChange}
-                  dir="ltr"
-                  placeholder="https://www.youtube.com/watch?v=... أو https://..."
-                  className="w-full px-3 py-2 rounded-lg bg-[#202020] border border-[#2E2E2E] text-white text-xs font-mono"
-                />
-              </div>
-            </div>
           </div>
         </div>
 

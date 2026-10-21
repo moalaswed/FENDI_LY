@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { requireSuperAdmin } from "@/lib/admin/dal";
 import { query } from "@/lib/db";
-import { checkHasVideoColumn } from "@/lib/products";
 import AdminHeader from "@/components/admin/AdminHeader";
 import { COMPANY } from "@/data/company";
 
@@ -22,7 +21,6 @@ interface DashboardStats {
   activeProducts: number;
   inactiveProducts: number;
   categoriesCount: number;
-  videoProductsCount: number;
 }
 
 interface RecentProductRow {
@@ -31,7 +29,6 @@ interface RecentProductRow {
   name: string;
   category_label: string;
   is_active: boolean;
-  has_video: boolean;
   updated_at: Date;
 }
 
@@ -39,26 +36,18 @@ async function getDashboardData(): Promise<{
   stats: DashboardStats;
   recentProducts: RecentProductRow[];
 }> {
-  const hasVideoCol = await checkHasVideoColumn();
-
   // 1. Fetch counts
   const statsRes = await query<{
     total_products: string;
     active_products: string;
     inactive_products: string;
     categories_count: string;
-    video_products_count: string;
   }>(
     `SELECT
        (SELECT COUNT(*) FROM products) AS total_products,
        (SELECT COUNT(*) FROM products WHERE is_active = true) AS active_products,
        (SELECT COUNT(*) FROM products WHERE is_active = false) AS inactive_products,
-       (SELECT COUNT(*) FROM categories) AS categories_count,
-       ${
-         hasVideoCol
-           ? "(SELECT COUNT(*) FROM products WHERE video IS NOT NULL AND TRIM(video) != '')"
-           : "0"
-       } AS video_products_count;`
+       (SELECT COUNT(*) FROM categories) AS categories_count;`
   );
 
   const statsRow = statsRes.rows[0];
@@ -67,14 +56,9 @@ async function getDashboardData(): Promise<{
     activeProducts: Number(statsRow?.active_products ?? 0),
     inactiveProducts: Number(statsRow?.inactive_products ?? 0),
     categoriesCount: Number(statsRow?.categories_count ?? 0),
-    videoProductsCount: Number(statsRow?.video_products_count ?? 0),
   };
 
   // 2. Fetch 5 most recently updated products
-  const videoExpr = hasVideoCol
-    ? "(p.video IS NOT NULL AND TRIM(p.video) != '')"
-    : "false";
-
   const recentRes = await query<RecentProductRow>(
     `SELECT 
        p.id,
@@ -82,7 +66,6 @@ async function getDashboardData(): Promise<{
        p.name,
        c.label AS category_label,
        p.is_active,
-       ${videoExpr} AS has_video,
        p.updated_at
      FROM products p
      JOIN categories c ON p.category_key = c.\`key\`
@@ -143,7 +126,7 @@ export default async function AdminDashboardPage() {
         </div>
 
         {/* KPI Metrics Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 sm:gap-6 mb-10">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 mb-10">
           {/* Metric 1: Total Products */}
           <div className="p-5 rounded-2xl bg-[#181818] border border-[#2A2A2A] relative overflow-hidden">
             <span className="text-xs text-[#8E8E8E] block mb-1">إجمالي المنتجات</span>
@@ -180,14 +163,6 @@ export default async function AdminDashboardPage() {
             <div className="text-[10px] text-[#777777] mt-2">قطاعات التصنيع الرئيسية</div>
           </div>
 
-          {/* Metric 5: Video Enabled Products */}
-          <div className="p-5 rounded-2xl bg-[#181818] border border-[#2A2A2A] relative overflow-hidden col-span-2 md:col-span-1">
-            <span className="text-xs text-[#8E8E8E] block mb-1">منتجات بفيديو</span>
-            <span className="text-2xl sm:text-3xl font-black text-[#A50000] font-mono">
-              {stats.videoProductsCount}
-            </span>
-            <div className="text-[10px] text-[#A50000]/80 mt-2">عروض فيديو توضيحية</div>
-          </div>
         </div>
 
         {/* Quick Actions & Recent Products */}
@@ -228,12 +203,6 @@ export default async function AdminDashboardPage() {
                   </div>
 
                   <div className="flex items-center gap-3 shrink-0">
-                    {prod.has_video && (
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#A50000]/20 text-[#A50000] border border-[#A50000]/40">
-                        فيديو
-                      </span>
-                    )}
-
                     <span
                       className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                         prod.is_active
